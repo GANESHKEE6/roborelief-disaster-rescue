@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"name": "esp_dht",
+			"path": ".."
+		},
+		{
+			"name": "esp_mq3",
+			"path": "../../esp_mq3"
+		},
+		{
+			"name": "esp_imu",
+			"path": "../../esp_imu"
+		},
+		{
+			"name": "esp_bot",
+			"path": "../../esp_bot"
+		},
+		{
+			"name": "bot_test",
+			"path": "../../../../Documents/PlatformIO/Projects/bot_test"
+		}
+	],
+	"settings": {
+		"ROS2.distro": "jazzy",
+		"python.autoComplete.extraPaths": [
+			"/opt/ros/jazzy/lib/python3.12/site-packages"
+		],
+		"python.analysis.extraPaths": [
+			"/opt/ros/jazzy/lib/python3.12/site-packages"
+		]
+	}
+}

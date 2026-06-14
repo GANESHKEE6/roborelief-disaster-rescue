@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ValleyWatch | Command Center</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://static.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+    <script src="https://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --panel-bg: rgba(16, 24, 39, 0.85);
+            --cyan: #00f0ff;
+            --orange: #ff7700;
+            --red: #ff3333;
+            --green: #00ff66;
+            --text: #e2e8f0;
+        }
+        body { margin: 0; padding: 0; background: var(--bg-dark); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        
+        /* Map Setup */
+        #map { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; filter: invert(90%) hue-rotate(180deg) brightness(80%) contrast(120%); }
+        
+        /* UI Panels */
+        .panel { position: absolute; z-index: 10; background: var(--panel-bg); border: 1px solid var(--cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; }
+        .header { top: 20px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; color: var(--cyan); }
+        .left-panel { top: 80px; left: 20px; width: 300px; bottom: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .right-panel { top: 80px; right: 20px; width: 300px; bottom: 20px; display: flex; flex-direction: column; gap: 20px; }
+        
+        h3 { margin: 0 0 10px 0; font-size: 14px; color: var(--orange); border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .node-card { background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 10px; border-left: 4px solid var(--green); border-radius: 4px; cursor: pointer; transition: 0.2s;}
+        .node-card:hover { background: rgba(255,255,255,0.1); }
+        
+        .sim-control { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;}
+        input[type=range] { width: 60%; accent-color: var(--cyan); }
+        
+        .log-box { flex-grow: 1; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .log-entry { margin-bottom: 5px; color: var(--cyan); }
+        .log-error { color: var(--red); font-weight: bold; }
+        
+        /* Drone Telemetry */
+        .telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
+        .tel-val { font-size: 18px; color: var(--cyan); font-weight: bold; }
+        
+        /* Map Markers */
+        .drone-marker { background: var(--orange); border-radius: 50%; width: 15px; height: 15px; box-shadow: 0 0 10px var(--orange); border: 2px solid white;}
+        .node-Safe { background: var(--green); }
+        .node-Warning { background: #ffcc00; }
+        .node-Critical { background: var(--red); box-shadow: 0 0 15px var(--red); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <div class="panel header">ValleyWatch // Tactical Command</div>
+
+    <div class="left-panel">
+        <div class="panel" style="flex-grow: 1;">
+            <h3>SENSOR NETWORK</h3>
+            <div id="node-list">Loading nodes...</div>
+        </div>
+        <div class="panel" style="height: 250px;">
+            <h3>SIMULATION OVERRIDE</h3>
+            <div id="sim-panel" style="opacity: 0.5; pointer-events: none;">
+                <div style="margin-bottom: 10px;">Target: <span id="sim-target" style="color:var(--orange)">None Selected</span></div>
+                <div class="sim-control">MQ3 Gas <input type="range" id="sim-mq3" min="0" max="60" onchange="sendSim()"></div>
+                <div class="sim-control">IMU Vib <input type="range" id="sim-imu" min="0" max="1" step="0.1" onchange="sendSim()"></div>
+                <div class="sim-control">Temp °C <input type="range" id="sim-temp" min="-10" max="50" onchange="sendSim()"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="panel" style="height: 200px;">
+            <h3>UAV TELEMETRY</h3>
+            <div class="telemetry-grid">
+                <div>Status<br><span class="tel-val" id="uav-status">Idle</span></div>
+                <div>Altitude<br><span class="tel-val" id="uav-alt">0m</span></div>
+                <div>Speed<br><span class="tel-val" id="uav-speed">0km/h</span></div>
+                <div>Battery<br><span class="tel-val" id="uav-batt">100%</span></div>
+            </div>
+        </div>
+        <div class="panel" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h3>EVENT LOG</h3>
+            <div class="log-box" id="event-log"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Map Setup (Topographical) ---
+        const map = L.map('map', { zoomControl: false }).setView([46.0, 8.0], 13);
+        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+        }).addTo(map);
+
+        let mapNodes = {};
+        let droneMarker = L.marker([46.0, 8.0], {
+            icon: L.divIcon({className: 'drone-marker', iconSize: [15, 15]})
+        }).addTo(map);
+
+        // --- 2. ROS 2 Connection via Rosbridge ---
+        const ros = new ROSLIB.Ros({ url : 'ws://localhost:9090' });
+        
+        ros.on('connection', () => logEvent("SYSTEM", "Connected to ROS2 Network."));
+        ros.on('error', (error) => logEvent("SYSTEM", "ROS Connection Error", true));
+        ros.on('close', () => logEvent("SYSTEM", "ROS Connection Closed", true));
+
+        // ROS Topics
+        const telemetrySub = new ROSLIB.Topic({ ros: ros, name: '/valleywatch/telemetry', messageType: 'std_msgs/String' });
+        const droneSub = new ROSLIB.Topic({ ros: ros, name: '/valleywatch/drone_state', messageType: 'std_msgs/String' });
+        const eventSub = new ROSLIB.Topic({ ros: ros, name: '/valleywatch/events', messageType: 'std_msgs/String' });
+        const simPub = new ROSLIB.Topic({ ros: ros, name: '/valleywatch/sim_input', messageType: 'std_msgs/String' });
+
+        // --- 3. Dashboard Logic ---
+        let selectedNode = null;
+
+        telemetrySub.subscribe((message) => {
+            const data = JSON.parse(message.data);
+            updateNodeList(data);
+            updateMapMarkers(data);
+        });
+
+        droneSub.subscribe((message) => {
+            const d = JSON.parse(message.data);
+            document.getElementById('uav-status').innerText = d.status;
+            document.getElementById('uav-alt').innerText = d.alt.toFixed(1) + 'm';
+            document.getElementById('uav-speed').innerText = d.speed + 'km/h';
+            document.getElementById('uav-batt').innerText = d.battery.toFixed(1) + '%';
+            droneMarker.setLatLng([d.lat, d.lng]);
+        });
+
+        eventSub.subscribe((message) => {
+            const data = JSON.parse(message.data);
+            logEvent("ALERT", data.msg, data.level === 'error');
+        });
+
+        function updateNodeList(data) {
+            const list = document.getElementById('node-list');
+            list.innerHTML = '';
+            for (const [id, node] of Object.entries(data)) {
+                let color = node.status === 'Safe' ? 'var(--green)' : (node.status === 'Warning' ? '#ffcc00' : 'var(--red)');
+                list.innerHTML += `
+                    <div class="node-card" style="border-left-color: ${color}" onclick="selectNode('${id}')">
+                        <strong>${id}</strong> - ${node.name}<br>
+                        <small>Status: ${node.status} | MQ3: ${node.mq3} | IMU: ${node.imu}</small>
+                    </div>
+                `;
+            }
+        }
+
+        function updateMapMarkers(data) {
+            for (const [id, node] of Object.entries(data)) {
+                if (!mapNodes[id]) {
+                    mapNodes[id] = L.circleMarker([node.lat, node.lng], { radius: 8 }).addTo(map);
+                }
+                mapNodes[id].setStyle({
+                    className: `node-${node.status}`,
+                    color: node.status === 'Safe' ? '#00ff66' : (node.status === 'Warning' ? '#ffcc00' : '#ff3333'),
+                    fillOpacity: 0.8
+                });
+            }
+        }
+
+        function selectNode(id) {
+            selectedNode = id;
+            const sp = document.getElementById('sim-panel');
+            sp.style.opacity = '1';
+            sp.style.pointerEvents = 'auto';
+            document.getElementById('sim-target').innerText = id;
+        }
+
+        function sendSim() {
+            if (!selectedNode) return;
+            const msg = new ROSLIB.Message({
+                data: JSON.stringify({
+                    id: selectedNode,
+                    mq3: parseFloat(document.getElementById('sim-mq3').value),
+                    imu: parseFloat(document.getElementById('sim-imu').value),
+                    temp: parseFloat(document.getElementById('sim-temp').value)
+                })
+            });
+            simPub.publish(msg);
+        }
+
+        function logEvent(source, msg, isError=false) {
+            const log = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML = `<div class="log-entry ${isError ? 'log-error' : ''}">[${time}] ${source}: ${msg}</div>` + log.innerHTML;
+        }
+    </script>
+</body>
+</html>

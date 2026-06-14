@@ -1,0 +1,39 @@
+{
+	"folders": [
+		{
+			"path": "../../../../Documents/PlatformIO/Projects/tilt_sensor"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../esp_dht"
+		},
+		{
+			"name": "joy_tester",
+			"path": "../../../../Documents/PlatformIO/Projects/joy_tester"
+		},
+		{
+			"path": "../../esp_mq3"
+		}
+	],
+	"settings": {
+		"ROS2.distro": "jazzy",
+		"python.autoComplete.extraPaths": [
+			"/home/ganesh/microros_laptop_ws/install/saftey_moniter_pkg/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/micro_ros_msgs/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/lab_monitor_system/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/lab_monitor/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/drive_base_msgs/lib/python3.12/site-packages",
+			"/opt/ros/jazzy/lib/python3.12/site-packages"
+		],
+		"python.analysis.extraPaths": [
+			"/home/ganesh/microros_laptop_ws/install/saftey_moniter_pkg/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/micro_ros_msgs/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/lab_monitor_system/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/lab_monitor/lib/python3.12/site-packages",
+			"/home/ganesh/microros_laptop_ws/install/drive_base_msgs/lib/python3.12/site-packages",
+			"/opt/ros/jazzy/lib/python3.12/site-packages"
+		]
+	}
+}
