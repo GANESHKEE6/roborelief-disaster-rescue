@@ -34,19 +34,22 @@ graph TD
 ## Demo Photos
 
 ### Full Arena — 4 Disaster Zones
-![Arena Side View](media/images/arena_side_view.jpg)
+![Arena Side View](media/arena_side_view.jpeg)
 
 ### Flood Detection Tower
-![Flood Tower](media/images/flood_tower.jpg)
+![Flood Tower](media/flood_tower.jpeg)
 
 ### Volcanic Hazard Model
-![Volcano Model](media/images/volcano_model_side.jpg)
+![Volcano Model](media/volcano_model_side.jpeg)
 
 ### Earthquake Detection Node
-![Earthquake Node](media/images/earthquake_node.jpg)
+![Earthquake Node](media/earthquake_node.jpeg)
 
 ### Fire and Gas Leak Detection
-![Fire Gas Node](media/images/fire_gas_node.jpg)
+![Fire Gas Node](media/fire_gas_node.jpeg)
+
+### landslide and angle detection
+![Imu node](media/landslide.jpeg)
 
 ## Tech Stack
 - **Firmware:** Arduino IDE + micro-ROS library on ESP32
