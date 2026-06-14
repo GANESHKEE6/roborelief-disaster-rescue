@@ -1,6 +1,6 @@
 # RoboRelief — Autonomous Disaster Response Rover
 
-![Arena Overview](media/images/arena_overview.jpg)
+![Arena Overview](media/Arena_Overview.jpeg)
 
 ## Overview
 A ROS2-based autonomous disaster response system that simulates 4 real-world
